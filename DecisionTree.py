@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.preprocessing import StandardScaler
@@ -20,42 +21,71 @@ X_scaled = scaler.fit_transform(X)
 # 拆分训练集和测试集
 X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.3, random_state=420)
 
-# 弱学习器范围
-estimators_range = range(1, 81)
+# 用于存储决策树的训练和测试准确率
+train_accuracies_decisionTree = []
+test_accuracies_decisionTree = []
+models = []
 
-# 用于adaboost的训练和测试准确率
-train_errors_adaBoost = []
-test_errors_adaBoost = []
+# 定义深度范围
+depth_range = range(1, 11)
 
-for number in estimators_range:
-    # 初始化 AdaBoost 模型
-    base_learner = DecisionTreeClassifier(max_depth=1, random_state=42)
-    adaboost_model = AdaBoostClassifier(estimator=base_learner, n_estimators=number, algorithm="SAMME", random_state=42)
+for depth in depth_range:
+    # 初始化决策树分类器
+    base_learner = DecisionTreeClassifier(max_depth=depth, random_state=42)
 
-    # 训练 AdaBoost 模型
-    adaboost_model.fit(X_train, y_train)
+    # 训练决策树模型
+    base_learner.fit(X_train, y_train)
 
-    # 测试 AdaBoost 模型并计算准确率
-    train_accuracy_adaBoost = adaboost_model.score(X_train, y_train) * 100
-    test_accuracy_adaBoost = adaboost_model.score(X_test, y_test) * 100
-    train_error_adaBoost = 100 - train_accuracy_adaBoost
-    test_error_adaBoost = 100 - test_accuracy_adaBoost
-    print(f"弱学习器数量为{number}的AdaBoost模型：训练集准确率={train_accuracy_adaBoost:.6f}%，测试集准确率: {test_accuracy_adaBoost:.6f}%")
+    # 保存训练模型
+    models.append(base_learner)
+
+    # 输出基础决策树模型在训练集和测试集上的准确率
+    train_accuracy_tree = base_learner.score(X_train, y_train) * 100
+    test_accuracy_tree = base_learner.score(X_test, y_test) * 100
+    print(f"深度为{depth}的决策树模型：训练集准确率: {train_accuracy_tree:.6f}%，测试集准确率:={test_accuracy_tree:.6f}%")
 
     # 保存训练结果
-    train_errors_adaBoost.append(train_error_adaBoost)
-    test_errors_adaBoost.append(test_error_adaBoost)
+    train_accuracies_decisionTree.append(train_accuracy_tree)
+    test_accuracies_decisionTree.append(test_accuracy_tree)
 
-# 绘制adaBoost训练集和测试集错误率曲线
+# 绘制决策树训练集和测试集准确率曲线
 plt.figure(figsize=(9, 6))
-plt.plot(estimators_range, train_errors_adaBoost, label="训练集", marker='o')
-plt.plot(estimators_range, test_errors_adaBoost, label="测试集", marker='o')
-plt.xlabel("弱学习器数量")
-plt.ylabel("错误率 (%)")
-plt.title("不同数量弱学习器AdaBoost的训练集与测试集学习曲线")
+plt.plot(depth_range, train_accuracies_decisionTree, label="训练集准确率", marker='o')
+plt.plot(depth_range, test_accuracies_decisionTree, label="测试集准确率", marker='o')
+plt.xlabel("决策树深度")
+plt.ylabel("准确率 (%)")
+plt.title("不同深度决策树的训练集与测试集准确率对比")
 plt.legend()
 plt.grid(True)
-plt.savefig('./Pictures/Accuracies_AdaBoost.png')
+plt.savefig('./Pictures/Accuracies_DecisionTreeClassifier.png')
+plt.show()
+
+# 提取特征重要性
+feature_importances = models[3].feature_importances_
+
+# 特征名称
+feature_names = wine.feature_names
+
+# 根据特征重要性进行排序
+sorted_indices = np.argsort(feature_importances)[::-1]
+sorted_feature_names = [feature_names[i] for i in sorted_indices]
+sorted_importances = feature_importances[sorted_indices]
+
+# 输出排序后特征的重要性
+print("按特征重要性排序：")
+for name, importance in zip(sorted_feature_names, sorted_importances):
+    print(f"{name}: {importance:.4f}")
+
+# 绘制特征重要性柱状图（按重要性从大到小排序）
+plt.figure(figsize=(12, 6))
+plt.bar(range(len(sorted_importances)), sorted_importances, align='center', color='skyblue', edgecolor='k')
+plt.xticks(np.arange(len(sorted_feature_names)), sorted_feature_names, rotation=45, ha='right')
+plt.ylabel("特征重要性")
+plt.xlabel("特征名称")
+plt.title("决策树模型中的特征重要性")
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.savefig('./Pictures/Feature_Importance_DecisionTree.png')  # 保存图片
 plt.show()
 
 # # 准备绘制基础决策树的决策边界
